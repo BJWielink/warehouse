@@ -183,7 +183,12 @@ class Matrix {
     }
 }
 
-class Rectangle {
+class Cube {
+    /**
+     * @type Array.<Array.<Vector>>
+     */
+    edges;
+
     /**
      * @type Array.<Vector>
      */
@@ -210,11 +215,32 @@ class Rectangle {
      */
     constructor(size) {
         this.vertices = [
-            new Vector(-size, -size, 0), // Top-left
-            new Vector(size, -size, 0),  // Top-right
-            new Vector(size, size, 0),   // Bottom-right
-            new Vector(-size, size, 0),  // Bottom-left
-            new Vector(-size, -size, 0)   // Top-left
+            new Vector(-size, -size, -size), // Top-left
+            new Vector(size, -size, -size),  // Top-right
+            new Vector(size, size, -size),   // Bottom-right
+            new Vector(-size, size, -size),  // Bottom-left
+
+            new Vector(-size, -size, size),
+            new Vector(size, -size, size),
+            new Vector(size, size, size),
+            new Vector(-size, size, size)
+        ];
+
+        this.edges = [
+            [this.vertices[0], this.vertices[1]],
+            [this.vertices[1], this.vertices[2]],
+            [this.vertices[2], this.vertices[3]],
+            [this.vertices[3], this.vertices[0]],
+
+            [this.vertices[4], this.vertices[5]],
+            [this.vertices[5], this.vertices[6]],
+            [this.vertices[6], this.vertices[7]],
+            [this.vertices[7], this.vertices[4]],
+
+            [this.vertices[0], this.vertices[4]],
+            [this.vertices[1], this.vertices[5]],
+            [this.vertices[2], this.vertices[6]],
+            [this.vertices[3], this.vertices[7]]
         ];
     }
 }
@@ -236,9 +262,9 @@ class Renderer {
     previousTimestamp = -1;
 
     /**
-     * @type {Rectangle}
+     * @type {Cube}
      */
-    rectangle = new Rectangle(50);
+    cube = new Cube(50);
 
     /**
      * @constructor
@@ -259,7 +285,7 @@ class Renderer {
             this.update(delta);
         }
         this.ctx.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
-        this.renderRectangle();
+        this.renderCube();
         requestAnimationFrame((timestamp) => this.render(timestamp));
     }
 
@@ -268,9 +294,9 @@ class Renderer {
      */
     update(delta) {
         const velocity = 0.0007;
-        this.rectangle.roll += delta * velocity;
-        this.rectangle.pitch += delta * velocity;
-        this.rectangle.yaw += delta * velocity;
+        this.cube.roll += delta * velocity;
+        this.cube.pitch += delta * velocity;
+        this.cube.yaw += delta * velocity;
     }
 
     /**
@@ -288,18 +314,29 @@ class Renderer {
         return delta;
     }
 
-    renderRectangle() {
-        let first = true;
-        this.ctx.beginPath();
-        for (let vertex of this.rectangle.vertices) {
-            vertex = vertex.rotate(this.rectangle.yaw, this.rectangle.pitch, this.rectangle.roll);
+    renderCube() {
+        // Drawing the vertices
+        for (let vertex of this.cube.vertices) {
+            vertex = vertex.rotate(this.cube.yaw, this.cube.pitch, this.cube.roll);
             vertex = vertex.translate(this.canvasElement.width / 2, this.canvasElement.height / 2);
 
-            if (first === true) {
-                this.ctx.moveTo(vertex.x(), vertex.y());
+            this.ctx.fillRect(vertex.x() - 2, vertex.y() - 2, 4, 4);
+        }
+
+        // Drawing the edges
+        this.ctx.beginPath();
+        for (const edge of this.cube.edges) {
+            let first = true;
+            for (let vertex of edge) {
+                vertex = vertex.rotate(this.cube.yaw, this.cube.pitch, this.cube.roll);
+                vertex = vertex.translate(this.canvasElement.width / 2, this.canvasElement.height / 2);
+
+                if (first === true) {
+                    this.ctx.moveTo(vertex.x(), vertex.y());
+                } else {
+                    this.ctx.lineTo(vertex.x(), vertex.y());
+                }
                 first = false;
-            } else {
-                this.ctx.lineTo(vertex.x(), vertex.y());
             }
         }
         this.ctx.stroke();
