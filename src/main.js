@@ -35,6 +35,13 @@ class Vector {
     }
 
     /**
+     * @returns {?number}
+     */
+    z() {
+        return this.#arr[2];
+    }
+
+    /**
      * @param {?number} [x]
      * @param {?number} [y]
      * @param {?number} [z]
@@ -52,6 +59,22 @@ class Vector {
      */
     rotate(yaw, pitch, roll) {
         return Matrix.rotation(yaw, pitch, roll).vecMul(this);
+    }
+
+    /**
+     * @param {!number} distance
+     * @return {!Vector}
+     */
+    depthProject(distance) {
+        return Matrix.depthProjection(distance, this).vecMul(this);
+    }
+
+    /**
+     * @param {!number} size
+     * @return {!Vector}
+     */
+    scaleAll(size) {
+        return Matrix.scale(size, size, size).vecMul(this);
     }
 }
 
@@ -169,6 +192,34 @@ class Matrix {
     }
 
     /**
+     * @param {!number} distance
+     * @param {!Vector} vector
+     * @return {!Matrix}
+     */
+    static depthProjection(distance, vector) {
+        const z = 1 / (distance - vector.z());
+
+        return new Matrix(
+            [z, 0, 0],
+            [0, z, 0]
+        );
+    }
+
+    /**
+     * @param {!number} x
+     * @param {!number} y
+     * @param {!number} z
+     * @return {!Matrix}
+     */
+    static scale(x, y, z) {
+        return new Matrix(
+            [x, 0, 0],
+            [0, y, 0],
+            [0, 0, z]
+        )
+    }
+
+    /**
      * @return {!number}
      */
     width() {
@@ -264,7 +315,7 @@ class Renderer {
     /**
      * @type {Cube}
      */
-    cube = new Cube(50);
+    cube = new Cube(0.5);
 
     /**
      * @constructor
@@ -314,11 +365,22 @@ class Renderer {
         return delta;
     }
 
+    /**
+     * @param {!Vector} vertex
+     * @return {!Vector}
+     */
+    viewProject(vertex) {
+        vertex = vertex.depthProject(2);
+        vertex= vertex.scaleAll(200);
+        vertex = vertex.translate(this.canvasElement.width / 2, this.canvasElement.height / 2);
+        return vertex;
+    }
+
     renderCube() {
         // Drawing the vertices
         for (let vertex of this.cube.vertices) {
             vertex = vertex.rotate(this.cube.yaw, this.cube.pitch, this.cube.roll);
-            vertex = vertex.translate(this.canvasElement.width / 2, this.canvasElement.height / 2);
+            vertex = this.viewProject(vertex);
 
             this.ctx.fillRect(vertex.x() - 2, vertex.y() - 2, 4, 4);
         }
@@ -329,7 +391,7 @@ class Renderer {
             let first = true;
             for (let vertex of edge) {
                 vertex = vertex.rotate(this.cube.yaw, this.cube.pitch, this.cube.roll);
-                vertex = vertex.translate(this.canvasElement.width / 2, this.canvasElement.height / 2);
+                vertex = this.viewProject(vertex);
 
                 if (first === true) {
                     this.ctx.moveTo(vertex.x(), vertex.y());
